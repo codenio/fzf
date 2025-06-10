@@ -39,7 +39,7 @@ func (r revision) compatible(other revision) bool {
 // Run starts fzf
 func Run(opts *Options) (int, error) {
 	if opts.Filter == nil {
-		if opts.Tmux != nil && len(os.Getenv("TMUX")) > 0 && opts.Tmux.index >= opts.Height.index {
+		if opts.useTmux() {
 			return runTmux(os.Args, opts)
 		}
 
@@ -74,20 +74,11 @@ func Run(opts *Options) (int, error) {
 
 	var lineAnsiState, prevLineAnsiState *ansiState
 	if opts.Ansi {
-		if opts.Theme.Colored {
-			ansiProcessor = func(data []byte) (util.Chars, *[]ansiOffset) {
-				prevLineAnsiState = lineAnsiState
-				trimmed, offsets, newState := extractColor(byteString(data), lineAnsiState, nil)
-				lineAnsiState = newState
-				return util.ToChars(stringBytes(trimmed)), offsets
-			}
-		} else {
-			// When color is disabled but ansi option is given,
-			// we simply strip out ANSI codes from the input
-			ansiProcessor = func(data []byte) (util.Chars, *[]ansiOffset) {
-				trimmed, _, _ := extractColor(byteString(data), nil, nil)
-				return util.ToChars(stringBytes(trimmed)), nil
-			}
+		ansiProcessor = func(data []byte) (util.Chars, *[]ansiOffset) {
+			prevLineAnsiState = lineAnsiState
+			trimmed, offsets, newState := extractColor(byteString(data), lineAnsiState, nil)
+			lineAnsiState = newState
+			return util.ToChars(stringBytes(trimmed)), offsets
 		}
 	}
 
@@ -112,7 +103,7 @@ func Run(opts *Options) (int, error) {
 		nthTransformer := opts.WithNth(opts.Delimiter)
 		chunkList = NewChunkList(cache, func(item *Item, data []byte) bool {
 			tokens := Tokenize(byteString(data), opts.Delimiter)
-			if opts.Ansi && opts.Theme.Colored && len(tokens) > 1 {
+			if opts.Ansi && len(tokens) > 1 {
 				var ansiState *ansiState
 				if prevLineAnsiState != nil {
 					ansiStateDup := *prevLineAnsiState
