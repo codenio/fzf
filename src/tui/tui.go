@@ -273,6 +273,10 @@ func NewColorPair(fg Color, bg Color, attr Attr) ColorPair {
 	return ColorPair{fg, bg, attr}
 }
 
+func NoColorPair() ColorPair {
+	return ColorPair{-1, -1, 0}
+}
+
 func (p ColorPair) Fg() Color {
 	return p.fg
 }
@@ -283,6 +287,10 @@ func (p ColorPair) Bg() Color {
 
 func (p ColorPair) Attr() Attr {
 	return p.attr
+}
+
+func (p ColorPair) IsFullBgMarker() bool {
+	return p.attr&FullBg > 0
 }
 
 func (p ColorPair) HasBg() bool {
@@ -329,6 +337,7 @@ func (p ColorPair) MergeNonDefault(other ColorPair) ColorPair {
 type ColorTheme struct {
 	Colored          bool
 	Input            ColorAttr
+	Ghost            ColorAttr
 	Disabled         ColorAttr
 	Fg               ColorAttr
 	Bg               ColorAttr
@@ -358,6 +367,10 @@ type ColorTheme struct {
 	HeaderBg         ColorAttr
 	HeaderBorder     ColorAttr
 	HeaderLabel      ColorAttr
+	Footer           ColorAttr
+	FooterBg         ColorAttr
+	FooterBorder     ColorAttr
+	FooterLabel      ColorAttr
 	Separator        ColorAttr
 	Scrollbar        ColorAttr
 	Border           ColorAttr
@@ -611,6 +624,7 @@ const (
 	WindowPreview
 	WindowInput
 	WindowHeader
+	WindowFooter
 )
 
 type Renderer interface {
@@ -701,6 +715,7 @@ var (
 	ColNormal               ColorPair
 	ColInput                ColorPair
 	ColDisabled             ColorPair
+	ColGhost                ColorPair
 	ColMatch                ColorPair
 	ColCursor               ColorPair
 	ColCursorEmpty          ColorPair
@@ -718,6 +733,9 @@ var (
 	ColHeader               ColorPair
 	ColHeaderBorder         ColorPair
 	ColHeaderLabel          ColorPair
+	ColFooter               ColorPair
+	ColFooterBorder         ColorPair
+	ColFooterLabel          ColorPair
 	ColSeparator            ColorPair
 	ColScrollbar            ColorPair
 	ColGapLine              ColorPair
@@ -756,10 +774,12 @@ func EmptyTheme() *ColorTheme {
 		Cursor:           ColorAttr{colUndefined, AttrUndefined},
 		Marker:           ColorAttr{colUndefined, AttrUndefined},
 		Header:           ColorAttr{colUndefined, AttrUndefined},
+		Footer:           ColorAttr{colUndefined, AttrUndefined},
 		Border:           ColorAttr{colUndefined, AttrUndefined},
 		BorderLabel:      ColorAttr{colUndefined, AttrUndefined},
 		ListLabel:        ColorAttr{colUndefined, AttrUndefined},
 		ListBorder:       ColorAttr{colUndefined, AttrUndefined},
+		Ghost:            ColorAttr{colUndefined, Dim},
 		Disabled:         ColorAttr{colUndefined, AttrUndefined},
 		PreviewFg:        ColorAttr{colUndefined, AttrUndefined},
 		PreviewBg:        ColorAttr{colUndefined, AttrUndefined},
@@ -775,6 +795,9 @@ func EmptyTheme() *ColorTheme {
 		HeaderBg:         ColorAttr{colUndefined, AttrUndefined},
 		HeaderBorder:     ColorAttr{colUndefined, AttrUndefined},
 		HeaderLabel:      ColorAttr{colUndefined, AttrUndefined},
+		FooterBg:         ColorAttr{colUndefined, AttrUndefined},
+		FooterBorder:     ColorAttr{colUndefined, AttrUndefined},
+		FooterLabel:      ColorAttr{colUndefined, AttrUndefined},
 		GapLine:          ColorAttr{colUndefined, AttrUndefined},
 		Nth:              ColorAttr{colUndefined, AttrUndefined},
 	}
@@ -804,6 +827,7 @@ func NoColorTheme() *ColorTheme {
 		Header:           ColorAttr{colDefault, AttrUndefined},
 		Border:           ColorAttr{colDefault, AttrUndefined},
 		BorderLabel:      ColorAttr{colDefault, AttrUndefined},
+		Ghost:            ColorAttr{colDefault, Dim},
 		Disabled:         ColorAttr{colDefault, AttrUndefined},
 		PreviewFg:        ColorAttr{colDefault, AttrUndefined},
 		PreviewBg:        ColorAttr{colDefault, AttrUndefined},
@@ -821,6 +845,9 @@ func NoColorTheme() *ColorTheme {
 		HeaderBg:         ColorAttr{colDefault, AttrUndefined},
 		HeaderBorder:     ColorAttr{colDefault, AttrUndefined},
 		HeaderLabel:      ColorAttr{colDefault, AttrUndefined},
+		FooterBg:         ColorAttr{colDefault, AttrUndefined},
+		FooterBorder:     ColorAttr{colDefault, AttrUndefined},
+		FooterLabel:      ColorAttr{colDefault, AttrUndefined},
 		GapLine:          ColorAttr{colDefault, AttrUndefined},
 		Nth:              ColorAttr{colUndefined, AttrUndefined},
 	}
@@ -848,8 +875,10 @@ func init() {
 		Cursor:           ColorAttr{colRed, AttrUndefined},
 		Marker:           ColorAttr{colMagenta, AttrUndefined},
 		Header:           ColorAttr{colCyan, AttrUndefined},
+		Footer:           ColorAttr{colCyan, AttrUndefined},
 		Border:           ColorAttr{colBlack, AttrUndefined},
 		BorderLabel:      ColorAttr{colWhite, AttrUndefined},
+		Ghost:            ColorAttr{colUndefined, Dim},
 		Disabled:         ColorAttr{colUndefined, AttrUndefined},
 		PreviewFg:        ColorAttr{colUndefined, AttrUndefined},
 		PreviewBg:        ColorAttr{colUndefined, AttrUndefined},
@@ -864,6 +893,12 @@ func init() {
 		InputBg:          ColorAttr{colUndefined, AttrUndefined},
 		InputBorder:      ColorAttr{colUndefined, AttrUndefined},
 		InputLabel:       ColorAttr{colUndefined, AttrUndefined},
+		HeaderBg:         ColorAttr{colUndefined, AttrUndefined},
+		HeaderBorder:     ColorAttr{colUndefined, AttrUndefined},
+		HeaderLabel:      ColorAttr{colUndefined, AttrUndefined},
+		FooterBg:         ColorAttr{colUndefined, AttrUndefined},
+		FooterBorder:     ColorAttr{colUndefined, AttrUndefined},
+		FooterLabel:      ColorAttr{colUndefined, AttrUndefined},
 		GapLine:          ColorAttr{colUndefined, AttrUndefined},
 		Nth:              ColorAttr{colUndefined, AttrUndefined},
 	}
@@ -888,8 +923,10 @@ func init() {
 		Cursor:           ColorAttr{161, AttrUndefined},
 		Marker:           ColorAttr{168, AttrUndefined},
 		Header:           ColorAttr{109, AttrUndefined},
+		Footer:           ColorAttr{109, AttrUndefined},
 		Border:           ColorAttr{59, AttrUndefined},
 		BorderLabel:      ColorAttr{145, AttrUndefined},
+		Ghost:            ColorAttr{colUndefined, Dim},
 		Disabled:         ColorAttr{colUndefined, AttrUndefined},
 		PreviewFg:        ColorAttr{colUndefined, AttrUndefined},
 		PreviewBg:        ColorAttr{colUndefined, AttrUndefined},
@@ -904,6 +941,12 @@ func init() {
 		InputBg:          ColorAttr{colUndefined, AttrUndefined},
 		InputBorder:      ColorAttr{colUndefined, AttrUndefined},
 		InputLabel:       ColorAttr{colUndefined, AttrUndefined},
+		HeaderBg:         ColorAttr{colUndefined, AttrUndefined},
+		HeaderBorder:     ColorAttr{colUndefined, AttrUndefined},
+		HeaderLabel:      ColorAttr{colUndefined, AttrUndefined},
+		FooterBg:         ColorAttr{colUndefined, AttrUndefined},
+		FooterBorder:     ColorAttr{colUndefined, AttrUndefined},
+		FooterLabel:      ColorAttr{colUndefined, AttrUndefined},
 		GapLine:          ColorAttr{colUndefined, AttrUndefined},
 		Nth:              ColorAttr{colUndefined, AttrUndefined},
 	}
@@ -928,8 +971,10 @@ func init() {
 		Cursor:           ColorAttr{161, AttrUndefined},
 		Marker:           ColorAttr{168, AttrUndefined},
 		Header:           ColorAttr{31, AttrUndefined},
+		Footer:           ColorAttr{31, AttrUndefined},
 		Border:           ColorAttr{145, AttrUndefined},
 		BorderLabel:      ColorAttr{59, AttrUndefined},
+		Ghost:            ColorAttr{colUndefined, Dim},
 		Disabled:         ColorAttr{colUndefined, AttrUndefined},
 		PreviewFg:        ColorAttr{colUndefined, AttrUndefined},
 		PreviewBg:        ColorAttr{colUndefined, AttrUndefined},
@@ -947,6 +992,9 @@ func init() {
 		HeaderBg:         ColorAttr{colUndefined, AttrUndefined},
 		HeaderBorder:     ColorAttr{colUndefined, AttrUndefined},
 		HeaderLabel:      ColorAttr{colUndefined, AttrUndefined},
+		FooterBg:         ColorAttr{colUndefined, AttrUndefined},
+		FooterBorder:     ColorAttr{colUndefined, AttrUndefined},
+		FooterLabel:      ColorAttr{colUndefined, AttrUndefined},
 		GapLine:          ColorAttr{colUndefined, AttrUndefined},
 		Nth:              ColorAttr{colUndefined, AttrUndefined},
 	}
@@ -982,6 +1030,7 @@ func InitTheme(theme *ColorTheme, baseTheme *ColorTheme, forceBlack bool, hasInp
 	theme.Cursor = o(baseTheme.Cursor, theme.Cursor)
 	theme.Marker = o(baseTheme.Marker, theme.Marker)
 	theme.Header = o(baseTheme.Header, theme.Header)
+	theme.Footer = o(baseTheme.Footer, theme.Footer)
 	theme.Border = o(baseTheme.Border, theme.Border)
 	theme.BorderLabel = o(baseTheme.BorderLabel, theme.BorderLabel)
 
@@ -995,6 +1044,7 @@ func InitTheme(theme *ColorTheme, baseTheme *ColorTheme, forceBlack bool, hasInp
 	theme.SelectedFg = o(theme.ListFg, theme.SelectedFg)
 	theme.SelectedBg = o(theme.ListBg, theme.SelectedBg)
 	theme.SelectedMatch = o(theme.Match, theme.SelectedMatch)
+	theme.Ghost = o(theme.Input, theme.Ghost)
 	theme.Disabled = o(theme.Input, theme.Disabled)
 	theme.Gutter = o(theme.DarkBg, theme.Gutter)
 	theme.PreviewFg = o(theme.Fg, theme.PreviewFg)
@@ -1034,6 +1084,10 @@ func InitTheme(theme *ColorTheme, baseTheme *ColorTheme, forceBlack bool, hasInp
 	theme.HeaderBorder = o(theme.Border, theme.HeaderBorder)
 	theme.HeaderLabel = o(theme.BorderLabel, theme.HeaderLabel)
 
+	theme.FooterBg = o(theme.Bg, theme.FooterBg)
+	theme.FooterBorder = o(theme.Border, theme.FooterBorder)
+	theme.FooterLabel = o(theme.BorderLabel, theme.FooterLabel)
+
 	initPalette(theme)
 }
 
@@ -1051,7 +1105,8 @@ func initPalette(theme *ColorTheme) {
 	ColNormal = pair(theme.ListFg, theme.ListBg)
 	ColSelected = pair(theme.SelectedFg, theme.SelectedBg)
 	ColInput = pair(theme.Input, theme.InputBg)
-	ColDisabled = pair(theme.Disabled, theme.ListBg)
+	ColGhost = pair(theme.Ghost, theme.InputBg)
+	ColDisabled = pair(theme.Disabled, theme.InputBg)
 	ColMatch = pair(theme.Match, theme.ListBg)
 	ColSelectedMatch = pair(theme.SelectedMatch, theme.SelectedBg)
 	ColCursor = pair(theme.Cursor, theme.Gutter)
@@ -1086,6 +1141,9 @@ func initPalette(theme *ColorTheme) {
 	ColHeader = pair(theme.Header, theme.HeaderBg)
 	ColHeaderBorder = pair(theme.HeaderBorder, theme.HeaderBg)
 	ColHeaderLabel = pair(theme.HeaderLabel, theme.HeaderBg)
+	ColFooter = pair(theme.Footer, theme.FooterBg)
+	ColFooterBorder = pair(theme.FooterBorder, theme.FooterBg)
+	ColFooterLabel = pair(theme.FooterLabel, theme.FooterBg)
 }
 
 func runeWidth(r rune) int {
