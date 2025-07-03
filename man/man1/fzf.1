@@ -1,7 +1,7 @@
 .ig
 The MIT License (MIT)
 
-Copyright (c) 2013-2024 Junegunn Choi
+Copyright (c) 2013-2025 Junegunn Choi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ..
-.TH fzf 1 "May 2025" "fzf 0.62.0" "fzf - a command-line fuzzy finder"
+.TH fzf 1 "Jun 2025" "fzf 0.63.0" "fzf - a command-line fuzzy finder"
 
 .SH NAME
 fzf - a command-line fuzzy finder
@@ -262,8 +262,9 @@ color mappings. Each entry is separated by a comma and/or whitespaces.
       \fBlist\-bg             \fRList section background
         \fBselected\-bg       \fRSelected line background
       \fBpreview\-bg          \fRPreview window background
-      \fBinput\-bg            \fRInput window background (\fB\-\-input\-border\fR)
-      \fBheader\-bg           \fRHeader window background (\fB\-\-header\-border\fR)
+      \fBinput\-bg            \fRInput window background
+      \fBheader\-bg           \fRHeader window background
+      \fBfooter\-bg           \fRFooter window background
     \fBhl                    \fRHighlighted substrings
       \fBselected\-hl         \fRHighlighted substrings in the selected line
     \fBcurrent\-fg (fg+)      \fRText (current line)
@@ -272,6 +273,7 @@ color mappings. Each entry is separated by a comma and/or whitespaces.
     \fBcurrent\-hl (hl+)      \fRHighlighted substrings (current line)
     \fBalt\-bg                \fRAlternate background color to create striped lines
     \fBquery (input\-fg)      \fRQuery string
+      \fBghost               \fRGhost text (\fB\-\-ghost\fR, \fBdim\fR applied by default)
       \fBdisabled            \fRQuery string when search is disabled (\fB\-\-disabled\fR)
     \fBinfo                  \fRInfo line (match counters)
     \fBborder                \fRBorder around the window (\fB\-\-border\fR and \fB\-\-preview\fR)
@@ -283,16 +285,19 @@ color mappings. Each entry is separated by a comma and/or whitespaces.
         \fBpreview\-scrollbar \fRScrollbar
       \fBinput\-border        \fRBorder around the input window (\fB\-\-input\-border\fR)
       \fBheader\-border       \fRBorder around the header window (\fB\-\-header\-border\fR)
+      \fBfooter\-border       \fRBorder around the footer window (\fB\-\-footer\-border\fR)
     \fBlabel                 \fRBorder label (\fB\-\-border\-label\fR, \fB\-\-list\-label\fR, \fB\-\-input\-label\fR, and \fB\-\-preview\-label\fR)
       \fBlist\-label          \fRBorder label of the list section (\fB\-\-list\-label\fR)
       \fBpreview\-label       \fRBorder label of the preview window (\fB\-\-preview\-label\fR)
       \fBinput\-label         \fRBorder label of the input window (\fB\-\-input\-label\fR)
       \fBheader\-label        \fRBorder label of the header window (\fB\-\-header\-label\fR)
+      \fBfooter\-label        \fRBorder label of the footer window (\fB\-\-footer\-label\fR)
     \fBprompt                \fRPrompt
     \fBpointer               \fRPointer to the current line
     \fBmarker                \fRMulti\-select marker
     \fBspinner               \fRStreaming input indicator
     \fBheader (header\-fg)   \fRHeader
+    \fBfooter (footer\-fg)   \fRFooter
     \fBnth                   \fRParts of the line specified by \fB\-\-nth\fR (only supports attributes)
 
 .B ANSI COLORS:
@@ -502,6 +507,8 @@ Draw border around the finder
 .br
 .BR vertical "      Vertical lines on each side of the finder"
 .br
+.BR line "          Single line border (position automatically determined)"
+.br
 .BR top " (up)"
 .br
 .BR bottom " (down)"
@@ -516,6 +523,9 @@ Draw border around the finder
 If you use a terminal emulator where each box-drawing character takes
 2 columns, try setting \fB\-\-ambidouble\fR. If the border is still not properly
 rendered, set \fB\-\-no\-unicode\fR.
+
+\fBline\fR style draws a single separator line at the top when \fB\-\-height\fR
+is used.
 
 .TP
 .BI "\-\-border\-label" [=LABEL]
@@ -660,7 +670,8 @@ Do not display scrollbar. A synonym for \fB\-\-scrollbar=''\fB
 
 .TP
 .BI "\-\-list\-border" [=STYLE]
-Draw border around the list section
+Draw border around the list section. \fBline\fR style is not supported for
+this border.
 
 .TP
 .BI "\-\-list\-label" [=LABEL]
@@ -747,7 +758,8 @@ actions are affected:
 \fBkill\-word\fR
 .TP
 .BI "\-\-input\-border" [=STYLE]
-Draw border around the input section
+Draw border around the input section. \fBline\fR style draws a single separator
+line between the input section and the list section.
 
 .TP
 .BI "\-\-input\-label" [=LABEL]
@@ -781,12 +793,15 @@ fzf also exports \fB$FZF_PREVIEW_TOP\fR and \fB$FZF_PREVIEW_LEFT\fR so that
 the preview command can determine the position of the preview window.
 
 A placeholder expression starting with \fB+\fR flag will be replaced to the
-space-separated list of the selected lines (or the current line if no selection
+space-separated list of the selected items (or the current item if no selection
 was made) individually quoted.
 
 e.g.
      \fBfzf \-\-multi \-\-preview='head \-10 {+}'
      git log \-\-oneline | fzf \-\-multi \-\-preview 'git show {+1}'\fR
+
+Similarly, a placeholder expression starting with \fB*\fR flag will be replaced
+to the space-separated list of all matched items individually quoted.
 
 Each expression expands to a quoted string, so that it's safe to pass it as an
 argument to an external command. So you should not manually add quotes around
@@ -799,14 +814,13 @@ from the replacement string. To preserve the whitespace, use the \fBs\fR flag.
 
 A placeholder expression with \fBf\fR flag is replaced to the path of
 a temporary file that holds the evaluated list. This is useful when you
-multi-select a large number of items and the length of the evaluated string may
+pass a large number of items and the length of the evaluated string may
 exceed \fBARG_MAX\fR.
 
 e.g.
-     \fB# Press CTRL\-A to select 100K items and see the sum of all the numbers.
+     \fB# See the sum of all the matched numbers
      # This won't work properly without 'f' flag due to ARG_MAX limit.
-     seq 100000 | fzf \-\-multi \-\-bind ctrl\-a:select\-all \\
-                      \-\-preview "awk '{sum+=\\$1} END {print sum}' {+f}"\fR
+     seq 100000 | fzf \-\-preview "awk '{sum+=\\$1} END {print sum}' {*f}"\fR
 
 Also,
 
@@ -847,8 +861,7 @@ e.g.
 
 .TP
 .BI "\-\-preview\-border" [=STYLE]
-Short for \fB\-\-preview\-window=border\-STYLE\fR. In addition to the other
-styles, \fBline\fR style is also supported for preview border, which draws
+Short for \fB\-\-preview\-window=border\-STYLE\fR. \fBline\fR style draws
 a single separator line between the preview window and the rest of the
 interface.
 
@@ -1000,10 +1013,12 @@ The first N lines of the input are treated as the sticky header. When
 lines that follow.
 .TP
 .B "\-\-header\-first"
-Print header before the prompt line
+Print header before the prompt line. When both normal header and header lines
+(\fB\-\-header\-lines\fR) are present, this applies only to the normal header.
 .TP
 .BI "\-\-header\-border" [=STYLE]
-Draw border around the header section
+Draw border around the header section. \fBline\fR style draws a single
+separator line between the header window and the list section.
 
 .TP
 .BI "\-\-header\-label" [=LABEL]
@@ -1017,7 +1032,30 @@ Position of the header label
 .BI "\-\-header\-lines\-border" [=STYLE]
 Display header from \fB--header\-lines\fR with a separate border. Pass
 \fBnone\fR to still separate the header lines but without a border. To combine
-two headers, use \fB\-\-no\-header\-lines\-border\fR.
+two headers, use \fB\-\-no\-header\-lines\-border\fR. \fBline\fR style draws
+a single separator line between the header lines and the list section.
+
+.SS FOOTER
+
+.TP
+.BI "\-\-footer=" "STR"
+The given string will be printed as the sticky footer. The lines are displayed
+in the given order from top to bottom regardless of \fB\-\-layout\fR option, and
+are not affected by \fB\-\-with\-nth\fR. ANSI color codes are processed even when
+\fB\-\-ansi\fR is not set.
+
+.TP
+.BI "\-\-footer\-border" [=STYLE]
+Draw border around the header section. \fBline\fR style draws a single
+separator line between the footer and the list section.
+
+.TP
+.BI "\-\-footer\-label" [=LABEL]
+Label to print on the footer border
+
+.TP
+.BI "\-\-footer\-label\-pos" [=N[:top|bottom]]
+Position of the footer label
 
 .SS SCRIPTING
 .TP
@@ -1108,11 +1146,6 @@ e.g.
      # Send action to the server
      curl \-XPOST localhost:6266 \-d 'reload(seq 100)+change\-prompt(hundred> )'
 
-     # Get program state in JSON format (experimental)
-     # * Make sure NOT to access this endpoint from execute/transform actions
-     #   as it will result in a timeout
-     curl localhost:6266
-
      # Start HTTP server on port 6266 with remote connections allowed
      # * Listening on non-localhost address requires using an API key
      export FZF_API_KEY="$(head \-c 32 /dev/urandom | base64)"
@@ -1123,6 +1156,24 @@ e.g.
 
      # Choose port automatically and export it as $FZF_PORT to the child process
      fzf \-\-listen \-\-bind 'start:execute\-silent:echo $FZF_PORT > /tmp/fzf\-port'
+
+     # Get program state in JSON format (experimental)
+     # - GET Parameters:
+     #    - limit: number of items to return (default: 100)
+     #    - offset: number of items to skip (default: 0)
+     curl localhost:6266
+
+     # Automatically select items with .txt extension
+     fzf \-\-multi \-\-sync \-\-listen \-\-bind 'load:transform:
+       pos=1
+       curl \-s localhost:$FZF_PORT?limit=1000 | jq \-r .matches[].text | while read \-r text; do
+         if [[ $text =~ \\.txt$ ]]; then
+           echo \-n "+pos($pos)+select"
+         fi
+         pos=$((pos + 1))
+       done
+       echo +first
+     '
      \fR
 
 .SS DIRECTORY TRAVERSAL
@@ -1760,6 +1811,9 @@ A key or an event can be bound to one or more of the following actions.
     \fBup\fR                           \fIctrl\-k  ctrl\-p  up\fR
     \fByank\fR                         \fIctrl\-y\fR
 
+Each \fBtransform*\fR action has a corresponding \fBbg\-transform*\fR
+variant that runs the command in the background.
+
 .SS ACTION COMPOSITION
 
 Multiple actions can be chained using \fB+\fR separator.
@@ -1883,6 +1937,25 @@ e.g.
                     echo accept ||
                     echo "change\-header:Invalid selection"'
     \fR
+
+A common mistake when writing a \fBtransform\fR action is not escaping
+placeholder expressions when passing them back to fzf. In the following
+example, if you don't escape \fB{}\fR, fzf will immediately replace it with the
+single-quoted string of the current item. This causes single quotes to appear
+in the header and footer, and the script will break if any item contains
+double-quote characters.
+
+    \fBfzf \-\-bind 'focus:transform:[[ $FZF_ACTION =~ up ]] &&
+                echo "change\-header()+transform\-footer:echo \\{}" ||
+                echo "change\-footer()+transform\-header:echo \\{}"'\fR
+
+.SS TRANSFORM IN THE BACKGROUND
+
+Transform actions are synchronous, meaning fzf becomes unresponsive while the
+command runs. To avoid this, each \fBtransform*\fR action has a corresponding
+\fBbg\-transform*\fR variant that runs in the background. Unless you need to
+chain multiple transform actions where later ones depend on earlier results,
+prefer using the \fBbg\fR variant.
 
 .SS PREVIEW BINDING
 

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/junegunn/fzf/src/tui"
 	"github.com/junegunn/fzf/src/util"
 )
 
@@ -39,7 +40,7 @@ func (r revision) compatible(other revision) bool {
 // Run starts fzf
 func Run(opts *Options) (int, error) {
 	if opts.Filter == nil {
-		if opts.Tmux != nil && len(os.Getenv("TMUX")) > 0 && opts.Tmux.index >= opts.Height.index {
+		if opts.useTmux() {
 			return runTmux(os.Args, opts)
 		}
 
@@ -74,20 +75,24 @@ func Run(opts *Options) (int, error) {
 
 	var lineAnsiState, prevLineAnsiState *ansiState
 	if opts.Ansi {
-		if opts.Theme.Colored {
-			ansiProcessor = func(data []byte) (util.Chars, *[]ansiOffset) {
-				prevLineAnsiState = lineAnsiState
-				trimmed, offsets, newState := extractColor(byteString(data), lineAnsiState, nil)
-				lineAnsiState = newState
-				return util.ToChars(stringBytes(trimmed)), offsets
+		ansiProcessor = func(data []byte) (util.Chars, *[]ansiOffset) {
+			prevLineAnsiState = lineAnsiState
+			trimmed, offsets, newState := extractColor(byteString(data), lineAnsiState, nil)
+			lineAnsiState = newState
+
+			// Full line background is found. Add a special marker.
+			if offsets != nil && newState != nil && len(*offsets) > 0 && newState.lbg >= 0 {
+				marker := (*offsets)[len(*offsets)-1]
+				marker.offset[0] = marker.offset[1]
+				marker.color.bg = newState.lbg
+				marker.color.attr = marker.color.attr | tui.FullBg
+				newOffsets := append(*offsets, marker)
+				offsets = &newOffsets
+
+				// Reset the full-line background color
+				lineAnsiState.lbg = -1
 			}
-		} else {
-			// When color is disabled but ansi option is given,
-			// we simply strip out ANSI codes from the input
-			ansiProcessor = func(data []byte) (util.Chars, *[]ansiOffset) {
-				trimmed, _, _ := extractColor(byteString(data), nil, nil)
-				return util.ToChars(stringBytes(trimmed)), nil
-			}
+			return util.ToChars(stringBytes(trimmed)), offsets
 		}
 	}
 
@@ -112,7 +117,7 @@ func Run(opts *Options) (int, error) {
 		nthTransformer := opts.WithNth(opts.Delimiter)
 		chunkList = NewChunkList(cache, func(item *Item, data []byte) bool {
 			tokens := Tokenize(byteString(data), opts.Delimiter)
-			if opts.Ansi && opts.Theme.Colored && len(tokens) > 1 {
+			if opts.Ansi && len(tokens) > 1 {
 				var ansiState *ansiState
 				if prevLineAnsiState != nil {
 					ansiStateDup := *prevLineAnsiState
@@ -135,7 +140,17 @@ func Run(opts *Options) (int, error) {
 				return false
 			}
 			item.text, item.colors = ansiProcessor(stringBytes(transformed))
-			item.text.TrimTrailingWhitespaces()
+
+			// We should not trim trailing whitespaces with background colors
+			var maxColorOffset int32
+			if item.colors != nil {
+				for _, ansi := range *item.colors {
+					if ansi.color.bg >= 0 {
+						maxColorOffset = util.Max32(maxColorOffset, ansi.offset[1])
+					}
+				}
+			}
+			item.text.TrimTrailingWhitespaces(int(maxColorOffset))
 			item.text.Index = itemIndex
 			item.origText = &data
 			itemIndex++

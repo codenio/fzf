@@ -13,10 +13,10 @@ var DefaultBorderShape = BorderRounded
 func (a Attr) Merge(b Attr) Attr {
 	if b&AttrRegular > 0 {
 		// Only keep bold attribute set by the system
-		return b | (a & BoldForce)
+		return (b &^ AttrRegular) | (a & BoldForce)
 	}
 
-	return a | b
+	return (a &^ AttrRegular) | b
 }
 
 const (
@@ -24,6 +24,7 @@ const (
 	AttrRegular   = Attr(1 << 8)
 	AttrClear     = Attr(1 << 9)
 	BoldForce     = Attr(1 << 10)
+	FullBg        = Attr(1 << 11)
 
 	Bold          = Attr(1)
 	Dim           = Attr(1 << 1)
